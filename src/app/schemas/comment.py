@@ -16,15 +16,19 @@ class CommentFeedbackResponse(BaseModel):
     """POST /api/feedback 응답"""
     is_problematic: bool
     severity: str  # "높음", "중간", "낮음"
-    problem_types: list[str]  # 한글: ["혐오", "성차별"] 형태
+    problem_types: list[str]  # 한글: ["혐오", "성차별", "기타 차별", "욕설/모욕"] 
     confidence: float
     issue_count: int
     reason: str
 
-# 라벨 매핑 (별도 파일에서 관리 추천)
-LABEL_MAPPING = {
-    "hate": "혐오",
-    "bias_others": "기타 차별",
-    "bias_gender": "성차별",
-    "offensive": "욕설/모욕"
-}
+    @classmethod
+    def from_classification(cls, classification: dict, reason: str):
+        """분류 결과에서 Response DTO 생성"""
+        return cls(
+            is_problematic=classification["is_problematic"],
+            severity=classification["severity"],
+            problem_types=classification["problem_types"],
+            confidence=classification["confidence"],
+            issue_count=classification["issue_count"],
+            reason=reason
+        )

@@ -4,6 +4,7 @@ from src.app.utils.constants import (
     CONFIDENCE_THRESHOLD, SEVERITY_THRESHOLD
 )
 from src.app.utils.llm import generate_reason, correct_comment_text
+from src.app.schemas.comment import CommentFeedbackResponse
 
 class CommentService:
     """댓글 분석 서비스"""
@@ -46,28 +47,24 @@ class CommentService:
         }
     
     @staticmethod
-    async def get_feedback(text: str) -> dict:
+    async def get_feedback(text: str) -> CommentFeedbackResponse:
         """상세 피드백 (모델 + LLM)"""
         
         # 1단계: 모델로 분류
         classification = CommentService.classify(text)
         
-        # 2단계: OpenAI로 이유 생성
-        reason = await generate_reason(
-            text, 
-            classification["problem_types"],
-            classification["all_labels"]
-        )
+        # 2단계: reason 분기 처리 (하드코딩 vs API)
+        if classification["is_problematic"]:
+            reason = await generate_reason(
+                text, 
+                classification["problem_types"],
+                classification["all_labels"]
+            )
+        else:
+            reason = "문제 없는 표현입니다."
         
         # 응답 생성
-        return {
-            "is_problematic": classification["is_problematic"],
-            "severity": classification["severity"],
-            "problem_types": classification["problem_types"],
-            "confidence": classification["confidence"],
-            "issue_count": classification["issue_count"],
-            "reason": reason
-        }
+        return CommentFeedbackResponse.from_classification(classification, reason)
     
     @staticmethod
     async def correct(text: str) -> dict:

@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request 
 from src.app.schemas.comment import (
     CommentRequest,
     CommentReviewResponse,
@@ -7,16 +7,31 @@ from src.app.schemas.comment import (
 )
 from src.app.services.comment_service import CommentService
 from src.app.core.middlewares.cors import setup_cors
+from src.app.core.middlewares.rate_limit import setup_rate_limit, limiter
 
 app = FastAPI(
-    title="Commento Mock API",
-    description="하드코딩된 응답만 제공하는 Mock API입니다.",
+    title="Commento API",
+    description="""
+    한국어 혐오 표현 분류 및 댓글 개선 API
+    
+    ## 기능
+    - **글 검토**: 혐오 표현 포함 여부 즉시 판정
+    - **글 수정**: 부적절한 표현을 적절한 표현으로 수정
+    - **피드백**: 문제 유형, 심각도, AI 설명 제공
+    
+    ## 분류 카테고리
+    - 혐오 (hate)
+    - 성차별 (bias_gender)
+    - 기타 차별 (bias_others)
+    - 욕설/모욕 (offensive)
+    """,
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
 
 setup_cors(app)
+setup_rate_limit(app)
 
 @app.get("/")
 async def health_check():
@@ -66,9 +81,10 @@ async def health_check():
         }
     }
 )
-async def review_comment(request: CommentRequest):
+@limiter.limit("100/minute")
+async def review_comment(request: Request, body:CommentRequest):
     """빠른 검증"""
-    result = CommentService.classify(request.comment)
+    result = CommentService.classify(body.comment)
     return CommentReviewResponse(is_problematic=result["is_problematic"])
 
 @app.post(
@@ -115,9 +131,10 @@ async def review_comment(request: CommentRequest):
         }
     }
 )
-async def correct_comment(request: CommentRequest):
+@limiter.limit("100/minute")
+async def correct_comment(request: Request,body: CommentRequest):
     """댓글 수정"""
-    result = await CommentService.correct(request.comment)
+    result = await CommentService.correct(body.comment)
     return CommentCorrectResponse(corrected_comment=result["corrected_comment"])
 
 @app.post(
@@ -171,7 +188,7 @@ async def correct_comment(request: CommentRequest):
         }
     }
 )
-async def feedback_comment(request: CommentRequest):
+@limiter.limit("100/minute")
+async def feedback_comment(request: Request, body: CommentRequest):
     """상세 피드백"""
-    result = await CommentService.get_feedback(request.comment)
-    return CommentFeedbackResponse(**result)
+    return await CommentService.get_feedback(body.comment)
