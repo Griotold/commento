@@ -1,10 +1,11 @@
 from fastapi import FastAPI
-from app.schemas.comment import (
+from src.app.schemas.comment import (
     CommentRequest,
     CommentReviewResponse,
     CommentCorrectResponse,
     CommentFeedbackResponse,
 )
+from src.app.services.comment_service import CommentService
 
 app = FastAPI(
     title="Commento Mock API",
@@ -63,7 +64,9 @@ async def health_check():
     }
 )
 async def review_comment(request: CommentRequest):
-    return CommentReviewResponse(is_problematic=True)
+    """빠른 검증"""
+    result = CommentService.classify(request.comment)
+    return CommentReviewResponse(is_problematic=result["is_problematic"])
 
 @app.post(
     "/api/correct",
@@ -164,11 +167,6 @@ async def correct_comment(request: CommentRequest):
     }
 )
 async def feedback_comment(request: CommentRequest):
-    return CommentFeedbackResponse(
-        is_problematic=True,
-        severity="높음",
-        problem_types=["고정관념", "부적절한 언어"],
-        confidence=0.92,
-        issue_count=2,
-        reason="여성을 특정 직업으로만 한정하는 고정관념이 포함되어 있습니다."
-    )
+    """상세 피드백"""
+    result = await CommentService.get_feedback(request.comment)
+    return CommentFeedbackResponse(**result)
