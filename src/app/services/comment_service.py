@@ -3,7 +3,7 @@ from src.app.utils.constants import (
     LABEL_MAPPING, MIN_THRESHOLD, 
     CONFIDENCE_THRESHOLD, SEVERITY_THRESHOLD
 )
-from src.app.utils.llm import generate_reason
+from src.app.utils.llm import generate_reason, correct_comment_text
 
 class CommentService:
     """댓글 분석 서비스"""
@@ -68,3 +68,34 @@ class CommentService:
             "issue_count": classification["issue_count"],
             "reason": reason
         }
+    
+    @staticmethod
+    async def correct(text: str) -> dict:
+        """댓글 수정"""
+        
+        # 1단계: 분류 (문제 여부 판정)
+        classification = CommentService.classify(text)
+        
+        # 2단계: 문제 없으면 원본 반환 (빠름!)
+        if not classification["is_problematic"]:
+            return {
+                "corrected_comment": text,
+                "is_corrected": False,
+                "reason": "수정할 내용이 없습니다."
+            }
+        
+        # 3단계: 문제 있으면 수정 생성 (느림)
+        try:
+            corrected = await correct_comment_text(text)
+            return {
+                "corrected_comment": corrected,
+                "is_corrected": True,
+                "reason": f"감지된 문제: {', '.join(classification['problem_types'])}"
+            }
+        except Exception as e:
+            # OpenAI API 오류 시 폴백
+            return {
+                "corrected_comment": text,
+                "is_corrected": False,
+                "reason": f"수정 실패: {str(e)}"
+            }

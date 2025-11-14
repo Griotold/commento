@@ -113,7 +113,9 @@ async def review_comment(request: CommentRequest):
     }
 )
 async def correct_comment(request: CommentRequest):
-    return CommentCorrectResponse(corrected_comment="수정된 댓글 텍스트")
+    """댓글 수정"""
+    result = await CommentService.correct(request.comment)
+    return CommentCorrectResponse(corrected_comment=result["corrected_comment"])
 
 @app.post(
     "/api/feedback",
