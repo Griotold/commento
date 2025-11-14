@@ -45,14 +45,14 @@ async def correct_comment_text(text: str) -> str:
         messages=[
             {
                 "role": "system", 
-                "content": "너는 한국어 댓글 수정 전문가야. 혐오 표현, 욕설, 차별적 표현을 적절한 표현으로 수정해줘. 의미는 유지하면서 부적절한 언어만 수정해."
+                "content": "너는 한국어 댓글 수정 전문가야. 혐오 표현, 욕설, 차별적 표현을 적절한 표현으로 수정해줘. 의미는 유지하면서 부적절한 언어만 수정해. 반드시 수정된 댓글 텍스트만 출력하고, 어떠한 설명이나 부가 설명도 포함하지 마."
             },
             {
                 "role": "user", 
-                "content": f"다음 댓글을 수정해줘:\n\n{text}"
+                "content": f"다음 댓글을 수정해줘. 수정된 댓글 텍스트만 출력해:\n\n{text}"
             }
         ],
-        max_tokens=200,
+        max_tokens=3000,
         temperature=0.7
     )
     
