@@ -25,7 +25,7 @@ app = FastAPI(
     - 기타 차별 (bias_others)
     - 욕설/모욕 (offensive)
     """,
-    version="1.0.0",
+    version="1.1.0",
     docs_url="/docs",
     redoc_url="/redoc"
 )
