@@ -3,56 +3,69 @@
 # 시스템 아키텍쳐
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        A[Chrome Extension<br/>유튜브 댓글 UI]
+    subgraph Client["🌐 Client Layer"]
+        CE["<b>Chrome Extension</b><br/>유튜브 댓글 UI"]
     end
     
-    subgraph "Backend Service Layer"
-        B[FastAPI Server<br/>Python Backend]
-        C[LangChain<br/>Orchestration]
+    subgraph FastAPI["<b>⚙️ FastAPI Server (Backend Core)</b>"]
+        LC["<b>LangChain</b><br/>오케스트레이션 레이어"]
+        
+        subgraph Model["<b>🤖 AI Classification Model</b>"]
+            KH["<b>beomi/korean-hatespeech-multilabel</b><br/>KcELECTRA-base<br/>다중 라벨 분류기"]
+            
+            subgraph Data["📊 Training Data"]
+                DS["<b>Korean UnSmile Dataset</b><br/>Smilegate AI<br/>LRAP: 0.919"]
+            end
+        end
+        
+        subgraph Results["<b>📋 Classification Output</b>"]
+            R1["<b>분류 라벨</b><br/>• hate 혐오<br/>• offensive 공격성<br/>• bias_gender 성차별<br/>• bias_others 기타차별"]
+            R2["<b>심각도 점수</b><br/>0.0 ~ 1.0"]
+        end
     end
     
-    subgraph "AI Model Layer"
-        D[beomi/korean-hatespeech-multilabel<br/>KcELECTRA-base]
-        E[OpenAI API<br/>GPT-4.1-mini]
+    subgraph External["<b>☁️ External API</b>"]
+        GPT["<b>OpenAI GPT-4.1-mini</b><br/>댓글 교정 & 피드백 생성"]
     end
     
-    subgraph "Data Layer"
-        F[Korean UnSmile Dataset<br/>학습 데이터<br/>LRAP: 0.919]
-    end
+    CE -->|"① 댓글 전송"| LC
+    LC -->|"② 분석 요청"| KH
+    DS -.->|"학습 데이터"| KH
+    KH -->|"③ 분류 수행"| R1
+    KH -->|"③ 심각도 측정"| R2
+    R1 --> LC
+    R2 --> LC
+    LC -->|"④ 수정/피드백 요청<br/>(API Call)"| GPT
+    GPT -->|"⑤ 교정 댓글<br/>피드백 반환"| LC
+    LC -->|"⑥ 최종 결과"| CE
     
-    subgraph "Classification Results"
-        G[혐오 표현 분류<br/>hate, offensive,<br/>bias_gender, bias_others]
-        H[심각도 측정]
-    end
+    style Client fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000
+    style CE fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000
     
-    A -->|댓글 데이터 전송| B
-    B --> C
-    C -->|댓글 분석 요청| D
-    D -->|분류 결과| G
-    D -->|심각도 평가| H
-    G --> C
-    H --> C
-    C -->|댓글 수정/피드백 생성| E
-    E -->|수정된 댓글<br/>피드백 메시지| C
-    C --> B
-    B -->|실시간 피드백<br/>수정 제안| A
+    style FastAPI fill:#fff3e0,stroke:#f57c00,stroke-width:4px,color:#000
+    style LC fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#000
     
-    F -.->|학습 데이터| D
+    style Model fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000
+    style KH fill:#e1bee7,stroke:#7b1fa2,stroke-width:2px,color:#000
     
-    style A fill:#e1f5ff
-    style B fill:#fff4e1
-    style C fill:#fff4e1
-    style D fill:#ffe1f5
-    style E fill:#ffe1f5
-    style F fill:#e1ffe1
-    style G fill:#f5e1ff
-    style H fill:#f5e1ff
+    style Data fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    style DS fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
+    
+    style Results fill:#fff9c4,stroke:#f9a825,stroke-width:2px,color:#000
+    style R1 fill:#fff59d,stroke:#f9a825,stroke-width:2px,color:#000
+    style R2 fill:#fff59d,stroke:#f9a825,stroke-width:2px,color:#000
+    
+    style External fill:#ffebee,stroke:#c62828,stroke-width:3px,color:#000
+    style GPT fill:#ffcdd2,stroke:#c62828,stroke-width:2px,color:#000
+    
+    %% 화살표 스타일 - 파랑색 굵게
+    linkStyle 0,1,3,4,5,6,7,8,9 stroke:#1976d2,stroke-width:3px
+    linkStyle 2 stroke:#666,stroke-width:2px,stroke-dasharray:5
 ```
 
 # 서비스 처리 흐름도
 - 댓글 분석 프로세스 시퀀스
-```
+```mermaid
 sequenceDiagram
     participant U as 사용자
     participant CE as Chrome Extension
@@ -87,65 +100,78 @@ sequenceDiagram
 - AI 모델 처리 과정
 ```mermaid
 graph LR
-    subgraph "입력"
-        A[유튜브 댓글<br/>텍스트]
+    subgraph Input["<b>📝 입력</b>"]
+        A["<b>유튜브 댓글</b><br/>텍스트"]
     end
     
-    subgraph "전처리"
-        B[텍스트 정규화]
-        C[토큰화]
+    subgraph Classification["<b>🤖 혐오 표현 분류 모델</b>"]
+        B["<b>beomi/korean-hatespeech-multilabel</b><br/>KcELECTRA-base<br/>Multi-label Classifier"]
     end
     
-    subgraph "혐오 표현 분류"
-        D[KcELECTRA-base<br/>Transformer]
-        E[Multi-label<br/>Classification]
+    subgraph ClassResult["<b>📊 분류 결과</b>"]
+        C1["<b>hate</b><br/>혐오"]
+        C2["<b>offensive</b><br/>공격성"]
+        C3["<b>bias_gender</b><br/>성차별"]
+        C4["<b>bias_others</b><br/>기타 차별"]
+        C5["<b>심각도 점수</b><br/>0.0 ~ 1.0"]
     end
     
-    subgraph "분류 결과"
-        F1[hate<br/>혐오]
-        F2[offensive<br/>공격성]
-        F3[bias_gender<br/>성차별]
-        F4[bias_others<br/>기타 차별]
-        G[심각도 점수<br/>0.0 ~ 1.0]
+    subgraph Orchestra["<b>⚙️ 오케스트레이션</b>"]
+        D["<b>LangChain</b><br/>프롬프트 체인"]
     end
     
-    subgraph "댓글 교정"
-        H[GPT-4.1-mini]
-        I[LangChain<br/>프롬프트 체인]
+    subgraph Correction["<b>✨ 댓글 교정 & 피드백 생성</b>"]
+        E["<b>OpenAI GPT-4.1-mini</b>"]
     end
     
-    subgraph "출력"
-        J[수정된 댓글]
-        K[교육적 피드백]
-        L[개선 제안]
+    subgraph Output["<b>✅ 출력</b>"]
+        F1["<b>수정된 댓글</b>"]
+        F2["<b>교육적 피드백</b>"]
+        F3["<b>개선 제안</b>"]
     end
     
-    A --> B
-    B --> C
-    C --> D
-    D --> E
-    E --> F1
-    E --> F2
-    E --> F3
-    E --> F4
-    E --> G
+    A -->|"① 원본 댓글"| B
+    B -->|"② 분류 수행"| C1
+    B --> C2
+    B --> C3
+    B --> C4
+    B --> C5
     
-    F1 --> I
-    F2 --> I
-    F3 --> I
-    F4 --> I
-    G --> I
+    C1 --> D
+    C2 --> D
+    C3 --> D
+    C4 --> D
+    C5 --> D
     
-    I --> H
-    H --> J
-    H --> K
-    H --> L
+    D -->|"③ 원본+분류결과<br/>전달"| E
+    E -->|"④ 생성"| F1
+    E -->|"④ 생성"| F2
+    E -->|"④ 생성"| F3
     
-    style A fill:#e1f5ff
-    style D fill:#ffe1f5
-    style E fill:#ffe1f5
-    style H fill:#ffe1e1
-    style J fill:#e1ffe1
-    style K fill:#e1ffe1
-    style L fill:#e1ffe1
+    style Input fill:#e3f2fd,stroke:#1976d2,stroke-width:3px,color:#000
+    style A fill:#bbdefb,stroke:#1976d2,stroke-width:2px,color:#000
+    
+    style Classification fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px,color:#000
+    style B fill:#e1bee7,stroke:#7b1fa2,stroke-width:2px,color:#000
+    
+    style ClassResult fill:#fff9c4,stroke:#f9a825,stroke-width:3px,color:#000
+    style C1 fill:#fff59d,stroke:#f9a825,stroke-width:2px,color:#000
+    style C2 fill:#fff59d,stroke:#f9a825,stroke-width:2px,color:#000
+    style C3 fill:#fff59d,stroke:#f9a825,stroke-width:2px,color:#000
+    style C4 fill:#fff59d,stroke:#f9a825,stroke-width:2px,color:#000
+    style C5 fill:#fff59d,stroke:#f9a825,stroke-width:2px,color:#000
+    
+    style Orchestra fill:#fff3e0,stroke:#f57c00,stroke-width:3px,color:#000
+    style D fill:#ffe0b2,stroke:#f57c00,stroke-width:2px,color:#000
+    
+    style Correction fill:#ffebee,stroke:#c62828,stroke-width:3px,color:#000
+    style E fill:#ffcdd2,stroke:#c62828,stroke-width:2px,color:#000
+    
+    style Output fill:#e8f5e9,stroke:#388e3c,stroke-width:3px,color:#000
+    style F1 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
+    style F2 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
+    style F3 fill:#c8e6c9,stroke:#388e3c,stroke-width:2px,color:#000
+    
+    %% 화살표 스타일 - 파랑색
+    linkStyle default stroke:#1976d2,stroke-width:3px
 ```
